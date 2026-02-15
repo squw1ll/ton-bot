@@ -5,6 +5,8 @@ import json
 import asyncio
 from dataclasses import dataclass
 from typing import Optional
+import os
+from aiohttp import web
 
 import aiohttp
 from aiogram import Bot, Dispatcher
@@ -127,5 +129,23 @@ async def main():
 
     await dp.start_polling(bot)
 
+async def _health_handler(request):
+    return web.Response(text="OK")
+
+async def start_health_server():
+    app = web.Application()
+    app.router.add_get("/", _health_handler)
+    app.router.add_get("/health", _health_handler)
+
+    port = int(os.getenv("PORT", 8000))  # Koyeb даёт PORT автоматически
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    async def runner():
+        await start_health_server()  # запускаем "фейковый" веб-сервер
+        await main()                 # запускаем твоего бота
+
+    asyncio.run(runner())
